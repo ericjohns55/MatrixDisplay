@@ -11,38 +11,46 @@ The matrix clock is a set of two vertically stacked 64x32 matrices built using t
 
 ### Example Pictures
 Matrix on day colors with weather displayed:
+
+
 ![Day colors](https://i.imgur.com/1ETmAOj.jpg "Day colors")
 
 Matrix on night colors with weather displayed:
+
+
 ![Night colors](https://i.imgur.com/OOEOef5.jpg "Night colors")
 
 Matrix with a reminder:
+
+
 ![Reminder](https://i.imgur.com/9ZzBVqw.jpg "Reminder")
 
 Interface:
+
+
 ![Interface](https://i.imgur.com/cHN4hDS.jpg "Interface")
 
 ### Commands
-#####/help
+##### /help
 Displays all the commands the bot can do with their usage
 
-#####/buttons
+##### /buttons
 Generates the control buttons for the bot
 
-#####/ping
+##### /ping
 Pings the bot to ensure it is functioning
 
-#####/ip
+##### /ip
 Displays the IP of the raspberry pi (for easy SSH reference)
 
-#####/text [text]
+##### /text [text]
 Displays the text you input on the bottom half of the matrix
 It will automatically split your words based on length into 3 lines (10 characters per line), use | (pipe) as a newline character to override this or use an empty line as an offset
 
-#####/textf [text]
+##### /textf [text]
 Works the same as text, but utilizes the full screen of the matrix
 
-#####/textc [color] or /textc [r] [g] [b]
+##### /textc [color] or /textc [r] [g] [b]
 Set the color of the text on the matrix
 Available colors: red, orange, yellow, green, blue, purple, pink, brown, gray, white, black
 For a custom color use /textc [red] [green] [blue]
