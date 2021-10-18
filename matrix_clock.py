@@ -6,6 +6,8 @@ from datetime import datetime
 from datetime import date
 from PIL import Image
 from io import BytesIO
+from dotenv import load_dotenv
+from dotenv import dotenv_values
 import requests
 import logging
 import threading
@@ -20,6 +22,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+load_dotenv()
 
 def button_generation(update: Update, context: CallbackContext) -> None:
     update.message.delete()
@@ -105,7 +108,7 @@ def buttons(update: Update, context: CallbackContext) -> None:
 def system_command(update: Update, context: CallbackContext) -> None:
     update.message.delete()
 
-    if not authenticate(update):        # ensure that we are authenticating for each command
+    if not authorized(update):        # ensure that we are authenticating for each command
         return
 
     text = update.message.text.replace("/os ", "")
@@ -115,7 +118,7 @@ def system_command(update: Update, context: CallbackContext) -> None:
 def help_command(update: Update, context: CallbackContext) -> None:
     update.message.delete()
 
-    if not authenticate(update):
+    if not authorized(update):
         return
 
     update.message.reply_text("Use /buttons to generate the keyboard.\nUse /ping to ping the bot.\nUse /ip to view "
@@ -126,7 +129,7 @@ def help_command(update: Update, context: CallbackContext) -> None:
 def text(update: Update, context: CallbackContext) -> None:
     update.message.delete()
 
-    if not authenticate(update):
+    if not authorized(update):
         return
 
     string = update.message.text.replace("/text ", "")      # catch text for bottom half and full screen
@@ -161,7 +164,7 @@ def text(update: Update, context: CallbackContext) -> None:
 def kill_command(update: Update, context: CallbackContext) -> None:
     update.message.delete()
 
-    if not authenticate(update):
+    if not authorized(update):
         return
 
     global kill_program     # hard kill command if the program needs to be shut down
@@ -173,7 +176,7 @@ def kill_command(update: Update, context: CallbackContext) -> None:
 def ping(update: Update, context: CallbackContext) -> None:
     update.message.delete()
 
-    if not authenticate(update):
+    if not authorized(update):
         return
 
     update.message.reply_text("Bot is working correctly.")
@@ -182,7 +185,7 @@ def ping(update: Update, context: CallbackContext) -> None:
 def ip(update: Update, context: CallbackContext) -> None:
     update.message.delete()
 
-    if not authenticate(update):
+    if not authorized(update):
         return
 
     update.message.reply_text("Raspberry PI IP: " + get_ip())
@@ -191,7 +194,7 @@ def ip(update: Update, context: CallbackContext) -> None:
 def set_text_color(update: Update, context: CallbackContext) -> None:
     update.message.delete()
 
-    if not authenticate(update):
+    if not authorized(update):
         return
 
     global text_color
@@ -257,11 +260,11 @@ def get_ip():
              [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 
-# authenticate user, pretty much make sure its my user name because i do not want anyone else using the bot
-def authenticate(update: Update) -> bool:
-    if update.message.from_user.username != "USERNAME HERE":
+# check authorized user, pretty much make sure its my user name because i do not want anyone else using the bot
+def authorized(update: Update) -> bool:
+    if update.message.from_user.username != dotenv_values(".env")["AUTHORIZED_USER"]:
         print("!!! LOG-IN ATTEMPT !!!\nUsername: " + update.message.from_user.username)
-        update.message.reply_text("You are not authenticated to use this bot.")
+        update.message.reply_text("You are not authorized to use this bot.")
         return False
     return True
 
@@ -351,6 +354,9 @@ def update_clock():
         override_on = False
         override_off = False
 
+    # off screen canvas to swap with
+    offscreen_canvas = matrix.CreateFrameCanvas()
+
     # simple check to make sure it does not glitch and update twice in a second
     if current_time != now[0]:
         current_time = now[0]
@@ -359,7 +365,7 @@ def update_clock():
             update_weather = True
 
         if update_weather:
-            url = "WEATHER API SITE FOR LOCATION HERE"
+            url = dotenv_values(".env")["WEATHER_URL"]  # load weather URL from .env file
 
             response = requests.get(url)
             data = response.json()
@@ -374,66 +380,68 @@ def update_clock():
 
             update_weather = False
 
-        matrix.Clear()      # always clear before writing again
+        offscreen_canvas.Clear()      # always clear before writing again
 
         if not override_off and ((now[4] >= 11 or now[4] < 3) or override_on):  # if theres no override and we are in active hours
             if show_image:      # always show the image before going further if we have one
-                matrix.SetImage(image.convert('RGB'))
+                offscreen_canvas.SetImage(image.convert('RGB'))
 
             position = ((64 - (len(current_time) * 8)) / 2) - 6     # determine central positioning for the date and time lines
             position2 = position + (len(current_time) * 8)
 
             if show_text < 2:       # non full matrix text scenario
                 if not show_image:  # no image, lets show the day, date, and time
-                    graphics.DrawText(matrix, font_date, ((64 - len(get_day() * 5)) / 2), 8, purple_color, get_day())
-                    graphics.DrawText(matrix, font_date, ((64 - len(get_date() * 5)) / 2), 16, purple_color, get_date())
-                    graphics.DrawText(matrix, font, position, 29, red_color, current_time)
-                    graphics.DrawText(matrix, font_half, position2, 29, red_color, now[2])
+                    graphics.DrawText(offscreen_canvas, font_date, ((64 - len(get_day() * 5)) / 2), 8, purple_color, get_day())
+                    graphics.DrawText(offscreen_canvas, font_date, ((64 - len(get_date() * 5)) / 2), 16, purple_color, get_date())
+                    graphics.DrawText(offscreen_canvas, font, position, 29, red_color, current_time)
+                    graphics.DrawText(offscreen_canvas, font_half, position2, 29, red_color, now[2])
 
                 if show_text == 0 and not show_image:   # no text or image at all, lets show the weather
                     weather_top = str(temp) + "F   " + str(real_feel) + "F"
-                    graphics.DrawText(matrix, font_half, ((64 - len(weather_top * 6)) / 2) + 64, 10, blue_color,
+                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(weather_top * 6)) / 2) + 64, 10, blue_color,
                                       weather_top)
-                    graphics.DrawText(matrix, font_half, ((64 - len(forecast * 6)) / 2) + 64, 18, blue_color,
+                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(forecast * 6)) / 2) + 64, 18, blue_color,
                                       forecast)
-                    graphics.DrawText(matrix, font_half, ((64 - len(wind * 6)) / 2) + 64, 28, blue_color, wind)
+                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(wind * 6)) / 2) + 64, 28, blue_color, wind)
                 else:   # there is either an image or text
                     if show_text == 1:  # lets show the text (will overlay with image (this is an intended feature))
                         if len(text_lines) >= 1:
-                            graphics.DrawText(matrix, font_half, ((64 - len(text_lines[0] * 6)) / 2) + 64, 9,
+                            graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[0] * 6)) / 2) + 64, 9,
                                               text_color, text_lines[0])
 
                         if len(text_lines) >= 2:
-                            graphics.DrawText(matrix, font_half, ((64 - len(text_lines[1] * 6)) / 2) + 64, 18,
+                            graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[1] * 6)) / 2) + 64, 18,
                                               text_color, text_lines[1])
 
                         if len(text_lines) >= 3:
-                            graphics.DrawText(matrix, font_half, ((64 - len(text_lines[2] * 6)) / 2) + 64, 27,
+                            graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[2] * 6)) / 2) + 64, 27,
                                               text_color, text_lines[2])
             else:   # we are full text, lets format and center all of the lines
                 if len(text_lines) >= 1:
-                    graphics.DrawText(matrix, font_half, ((64 - len(text_lines[0] * 6)) / 2), 9, text_color,
+                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[0] * 6)) / 2), 9, text_color,
                                       text_lines[0])
 
                 if len(text_lines) >= 2:
-                    graphics.DrawText(matrix, font_half, ((64 - len(text_lines[1] * 6)) / 2), 18, text_color,
+                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[1] * 6)) / 2), 18, text_color,
                                       text_lines[1])
 
                 if len(text_lines) >= 3:
-                    graphics.DrawText(matrix, font_half, ((64 - len(text_lines[2] * 6)) / 2), 27, text_color,
+                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[2] * 6)) / 2), 27, text_color,
                                       text_lines[2])
 
                 if len(text_lines) >= 4:
-                    graphics.DrawText(matrix, font_half, ((64 - len(text_lines[3] * 6)) / 2) + 64, 9, text_color,
+                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[3] * 6)) / 2) + 64, 9, text_color,
                                       text_lines[3])
 
                 if len(text_lines) >= 5:
-                    graphics.DrawText(matrix, font_half, ((64 - len(text_lines[4] * 6)) / 2) + 64, 18, text_color,
+                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[4] * 6)) / 2) + 64, 18, text_color,
                                       text_lines[4])
 
                 if len(text_lines) >= 6:
-                    graphics.DrawText(matrix, font_half, ((64 - len(text_lines[5] * 6)) / 2) + 64, 27, text_color,
+                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[5] * 6)) / 2) + 64, 27, text_color,
                                       text_lines[5])
+
+    matrix.SwapOnVSync(offscreen_canvas)
 
 
 # declare field variables
@@ -463,7 +471,7 @@ image = None
 
 
 def main() -> None:
-    updater = Updater("API TOKEN HERE")     # load bot tokens
+    updater = Updater(dotenv_values(".env")["API_KEY"]) # load bot API token from .env file
 
     updater.dispatcher.add_handler(CallbackQueryHandler(buttons))   # callback listener for the buttons
     updater.dispatcher.add_handler(CommandHandler('help', help_command))        # declare the commands
