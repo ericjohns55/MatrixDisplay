@@ -74,6 +74,7 @@ def buttons(update: Update, context: CallbackContext) -> None:
     global show_text
     global show_image
     global text_lines
+    global update_board
 
     if "ip" in data:
         query.message.reply_text("Raspberry PI IP: " + get_ip())
@@ -86,23 +87,30 @@ def buttons(update: Update, context: CallbackContext) -> None:
         show_text = 0
         show_image = False
         text_lines = []
+        update_board = True
     elif "red" in data:         # make sure conflicting variables are set to the opposite
         override_red = True
         override_color = False
+        update_board = True
     elif "color" in data:
         override_color = True
         override_red = False
+        update_board = True
     elif "on" in data:
         override_on = True
         override_off = False
+        update_board = True
     elif "off" in data:
         override_off = True
         override_on = False
+        update_board = True
     elif "cleartext" in data:
         show_text = 0
         text_lines = []
+        update_board = True
     elif "clearimage" in data:
         show_image = False
+        update_board = True
 
 
 def system_command(update: Update, context: CallbackContext) -> None:
@@ -137,9 +145,11 @@ def text(update: Update, context: CallbackContext) -> None:
 
     global text_lines
     global show_text
+    global update_board
 
     text_lines = []
     current_line = 0
+    update_board = True
 
     show_text = 2 if "textf" in update.message.text else 1      # 3 part variable, 0 is no text, 1 is half, 2 is full
 
@@ -198,6 +208,9 @@ def set_text_color(update: Update, context: CallbackContext) -> None:
         return
 
     global text_color
+    global update_board
+
+    update_board = True
 
     color = update.message.text
 
@@ -250,6 +263,9 @@ def poll_image(update: Update, context: CallbackContext) -> None:
 
     global show_image                                                   # update variable to show
     show_image = True
+
+    global update_board
+    update_board = True
 
 
 # REFERENCED: https://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib
@@ -327,6 +343,8 @@ def update_clock():
 
     global update_weather
 
+    global update_board
+
     global text_lines
     global text_color
     global show_text
@@ -364,6 +382,9 @@ def update_clock():
         if (current_time.endswith("0") or current_time.endswith("5")) and now[3] == 0:  # update weather every 5 minutes (to prevent exceeding the query limit for open weather api)
             update_weather = True
 
+        if now[3] == 0 and show_text < 2 and not show_image:    # make sure we update if we are at 0 seconds on the time (minute changed) and we do not have full screen text or an image
+            update_board = True
+
         if update_weather:
             url = dotenv_values(".env")["WEATHER_URL"]  # load weather URL from .env file
 
@@ -380,8 +401,6 @@ def update_clock():
 
             update_weather = False
 
-        offscreen_canvas.Clear()      # always clear before writing again
-
         if not override_off and ((now[4] >= 11 or now[4] < 3) or override_on):  # if theres no override and we are in active hours
             if show_image:      # always show the image before going further if we have one
                 offscreen_canvas.SetImage(image.convert('RGB'))
@@ -389,59 +408,63 @@ def update_clock():
             position = ((64 - (len(current_time) * 8)) / 2) - 6     # determine central positioning for the date and time lines
             position2 = position + (len(current_time) * 8)
 
-            if show_text < 2:       # non full matrix text scenario
-                if not show_image:  # no image, lets show the day, date, and time
-                    graphics.DrawText(offscreen_canvas, font_date, ((64 - len(get_day() * 5)) / 2), 8, purple_color, get_day())
-                    graphics.DrawText(offscreen_canvas, font_date, ((64 - len(get_date() * 5)) / 2), 16, purple_color, get_date())
-                    graphics.DrawText(offscreen_canvas, font, position, 29, red_color, current_time)
-                    graphics.DrawText(offscreen_canvas, font_half, position2, 29, red_color, now[2])
+            if update_board:            # only update if we need to push something new (reduces flicker)
+                if show_text < 2:       # non full matrix text scenario
+                    if not show_image:  # no image, lets show the day, date, and time
+                        graphics.DrawText(offscreen_canvas, font_date, ((64 - len(get_day() * 5)) / 2), 8, purple_color, get_day())
+                        graphics.DrawText(offscreen_canvas, font_date, ((64 - len(get_date() * 5)) / 2), 16, purple_color, get_date())
+                        graphics.DrawText(offscreen_canvas, font, position, 29, red_color, current_time)
+                        graphics.DrawText(offscreen_canvas, font_half, position2, 29, red_color, now[2])
 
-                if show_text == 0 and not show_image:   # no text or image at all, lets show the weather
-                    weather_top = str(temp) + "F   " + str(real_feel) + "F"
-                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(weather_top * 6)) / 2) + 64, 10, blue_color,
-                                      weather_top)
-                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(forecast * 6)) / 2) + 64, 18, blue_color,
-                                      forecast)
-                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(wind * 6)) / 2) + 64, 28, blue_color, wind)
-                else:   # there is either an image or text
-                    if show_text == 1:  # lets show the text (will overlay with image (this is an intended feature))
-                        if len(text_lines) >= 1:
-                            graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[0] * 6)) / 2) + 64, 9,
-                                              text_color, text_lines[0])
+                    if show_text == 0 and not show_image:   # no text or image at all, lets show the weather
+                        weather_top = str(temp) + "F   " + str(real_feel) + "F"
+                        graphics.DrawText(offscreen_canvas, font_half, ((64 - len(weather_top * 6)) / 2) + 64, 10, blue_color,
+                                          weather_top)
+                        graphics.DrawText(offscreen_canvas, font_half, ((64 - len(forecast * 6)) / 2) + 64, 18, blue_color,
+                                          forecast)
+                        graphics.DrawText(offscreen_canvas, font_half, ((64 - len(wind * 6)) / 2) + 64, 28, blue_color, wind)
+                    else:   # there is either an image or text
+                        if show_text == 1:  # lets show the text (will overlay with image (this is an intended feature))
+                            if len(text_lines) >= 1:
+                                graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[0] * 6)) / 2) + 64, 9,
+                                                  text_color, text_lines[0])
 
-                        if len(text_lines) >= 2:
-                            graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[1] * 6)) / 2) + 64, 18,
-                                              text_color, text_lines[1])
+                            if len(text_lines) >= 2:
+                                graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[1] * 6)) / 2) + 64, 18,
+                                                  text_color, text_lines[1])
 
-                        if len(text_lines) >= 3:
-                            graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[2] * 6)) / 2) + 64, 27,
-                                              text_color, text_lines[2])
-            else:   # we are full text, lets format and center all of the lines
-                if len(text_lines) >= 1:
-                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[0] * 6)) / 2), 9, text_color,
-                                      text_lines[0])
+                            if len(text_lines) >= 3:
+                                graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[2] * 6)) / 2) + 64, 27,
+                                                  text_color, text_lines[2])
+                else:   # we are full text, lets format and center all of the lines
+                    if len(text_lines) >= 1:
+                        graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[0] * 6)) / 2), 9, text_color,
+                                          text_lines[0])
 
-                if len(text_lines) >= 2:
-                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[1] * 6)) / 2), 18, text_color,
-                                      text_lines[1])
+                    if len(text_lines) >= 2:
+                        graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[1] * 6)) / 2), 18, text_color,
+                                          text_lines[1])
 
-                if len(text_lines) >= 3:
-                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[2] * 6)) / 2), 27, text_color,
-                                      text_lines[2])
+                    if len(text_lines) >= 3:
+                        graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[2] * 6)) / 2), 27, text_color,
+                                          text_lines[2])
 
-                if len(text_lines) >= 4:
-                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[3] * 6)) / 2) + 64, 9, text_color,
-                                      text_lines[3])
+                    if len(text_lines) >= 4:
+                        graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[3] * 6)) / 2) + 64, 9, text_color,
+                                          text_lines[3])
 
-                if len(text_lines) >= 5:
-                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[4] * 6)) / 2) + 64, 18, text_color,
-                                      text_lines[4])
+                    if len(text_lines) >= 5:
+                        graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[4] * 6)) / 2) + 64, 18, text_color,
+                                          text_lines[4])
 
-                if len(text_lines) >= 6:
-                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[5] * 6)) / 2) + 64, 27, text_color,
-                                      text_lines[5])
+                    if len(text_lines) >= 6:
+                        graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[5] * 6)) / 2) + 64, 27, text_color,
+                                          text_lines[5])
 
-    matrix.SwapOnVSync(offscreen_canvas)
+    if update_board:    # only swap screen on update events
+        matrix.SwapOnVSync(offscreen_canvas)
+
+    update_board = False    # if there was an update, it would have already been covered so lets turn that off to prevent flicker
 
 
 # declare field variables
@@ -464,6 +487,7 @@ temp = 0
 real_feel = 0
 wind = "0.0 mph"
 
+update_board = True
 text_lines = []
 show_text = 0
 show_image = False
@@ -508,7 +532,8 @@ if __name__ == '__main__':
     options.parallel = 1
     options.pwm_lsb_nanoseconds = 50
     options.brightness = 50
-    options.hardware_mapping = 'adafruit-hat'
+    options.pwm_dither_bits = 1
+    options.hardware_mapping = 'adafruit-hat-pwm'
 
     matrix = RGBMatrix(options=options)
 
