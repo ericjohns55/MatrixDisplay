@@ -30,6 +30,9 @@ show_text = 0
 show_image = False
 image = None
 
+font_size = 1
+last_text_input = ""
+
 
 # REFERENCED: https://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib
 def get_ip():

@@ -40,6 +40,11 @@ def button_generation(update: Update, context: CallbackContext) -> None:
         InlineKeyboardButton("Day Lights", callback_data='color')
     ]]
 
+    font_keyboard = [[
+        InlineKeyboardButton("Small", callback_data='small'), InlineKeyboardButton("Medium", callback_data='medium'),
+        InlineKeyboardButton("Large", callback_data='large')
+    ]]
+
     system_keyboard = [[
         InlineKeyboardButton("Ping", callback_data='ping'), InlineKeyboardButton("IP", callback_data='ip'),
         InlineKeyboardButton("Normalize", callback_data='normalize')
@@ -50,6 +55,9 @@ def button_generation(update: Update, context: CallbackContext) -> None:
 
     update.message.reply_text(emojize(':night_with_stars:') + " Color Control " + emojize(":night_with_stars:"),
                               reply_markup=InlineKeyboardMarkup(color_keyboard))
+
+    update.message.reply_text(emojize(':pencil:') + " Font Size " + emojize(":pencil:"),
+                              reply_markup=InlineKeyboardMarkup(font_keyboard))
 
     update.message.reply_text(emojize(':robot:') + " System Controls " + emojize(":robot:"),
                               reply_markup=InlineKeyboardMarkup(system_keyboard))
@@ -72,6 +80,8 @@ def buttons(update: Update, context: CallbackContext) -> None:
         utils.show_text = 0
         utils.show_image = False
         utils.text_lines = []
+        utils.font_size = 1
+        utils.last_text_input = ""
         utils.update_board = True
     elif "red" in data:         # make sure conflicting variables are set to the opposite
         utils.override_red = True
@@ -95,6 +105,18 @@ def buttons(update: Update, context: CallbackContext) -> None:
         utils.update_board = True
     elif "clearimage" in data:
         utils.show_image = False
+        utils.update_board = True
+    elif "small" in data:       # run the old text through again so it scales properly
+        utils.font_size = 0
+        parse_text(utils.last_text_input)
+        utils.update_board = True
+    elif "medium" in data:
+        utils.font_size = 1
+        parse_text(utils.last_text_input)
+        utils.update_board = True
+    elif "large" in data:
+        utils.font_size = 2
+        parse_text(utils.last_text_input)
         utils.update_board = True
 
 
@@ -141,7 +163,7 @@ def update_clock():
 
     # update weather every 5 minutes (to prevent exceeding the query limit for open weather api)
     if (current_time.endswith("0") or current_time.endswith("5")) and now[3] == 0:
-        time_utility.update_weather()
+        time_utility.update_weather()   # poll and update the weather variables in the utils class
 
     # make sure we update if we are at 0 seconds on the time (minute changed) and we do not have full screen text or an image
     if now[3] == 0 and utils.show_text < 2 and not utils.show_image:
@@ -152,82 +174,52 @@ def update_clock():
         if utils.show_image:  # always show the image before going further if we have one
             offscreen_canvas.SetImage(utils.image.convert('RGB'))
 
-        position = ((64 - (len(current_time) * 8)) / 2) - 6  # determine central positioning for the date and time lines
-        position2 = position + (len(current_time) * 8)
+        time_position = ((64 - (len(current_time) * 8)) / 2) - 6  # determine central positioning for the date and time lines
+        ampm_position = time_position + (len(current_time) * 8)       # determine positioning for the am or pm after the time
 
         if utils.update_board:  # only update if we need to push something new (reduces flicker)
             show_text = utils.show_text
-            text_lines = utils.text_lines
             text_color = utils.text_color
 
-            if show_text < 2:  # non full matrix text scenario
-                if not utils.show_image:  # no image, lets show the day, date, and time
-                    day = time_utility.get_day()
-                    date = time_utility.get_date()
+            if not utils.show_image and show_text < 2:  # no image, lets show the day, date, and time
+                day = time_utility.get_day()
+                date = time_utility.get_date()
 
-                    graphics.DrawText(offscreen_canvas, font_date, ((64 - len(day * 5)) / 2), 8, utils.purple_color,
-                                      day)
-                    graphics.DrawText(offscreen_canvas, font_date, ((64 - len(date * 5)) / 2), 16, utils.purple_color,
-                                      date)
-                    graphics.DrawText(offscreen_canvas, font, position, 29, utils.red_color, current_time)
-                    graphics.DrawText(offscreen_canvas, font_half, position2, 29, utils.red_color, now[2])
+                graphics.DrawText(offscreen_canvas, font_small, ((64 - len(day * 5)) / 2), 8, utils.purple_color,
+                                  day)
+                graphics.DrawText(offscreen_canvas, font_small, ((64 - len(date * 5)) / 2), 16, utils.purple_color,
+                                  date)
+                graphics.DrawText(offscreen_canvas, font_time, time_position, 29, utils.red_color, current_time)
+                graphics.DrawText(offscreen_canvas, font_medium, ampm_position, 29, utils.red_color, now[2])
 
-                if show_text == 0 and not utils.show_image:  # no text or image at all, lets show the weather
-                    temp = utils.temp
-                    forecast = utils.forecast
-                    wind = utils.wind
-                    real_feel = utils.real_feel
+            if show_text == 0 and not utils.show_image:  # no text or image at all, lets show the weather
+                temp = utils.temp       # grab current weather from the saved values in the utils class
+                forecast = utils.forecast
+                wind = utils.wind
+                real_feel = utils.real_feel
 
-                    weather_top = str(temp) + "F   " + str(real_feel) + "F"
+                weather_top = str(temp) + "F   " + str(real_feel) + "F"
 
-                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(weather_top * 6)) / 2) + 64, 10,
-                                      utils.blue_color,
-                                      weather_top)
-                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(forecast * 6)) / 2) + 64, 18,
-                                      utils.blue_color,
-                                      forecast)
-                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(wind * 6)) / 2) + 64, 28,
-                                      utils.blue_color, wind)
-                else:  # there is either an image or text
-                    if show_text == 1:  # lets show the text (will overlay with image (this is an intended feature))
-                        if len(text_lines) >= 1:
-                            graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[0] * 6)) / 2) + 64, 9,
-                                              text_color, text_lines[0])
+                graphics.DrawText(offscreen_canvas, font_medium, ((64 - len(weather_top * 6)) / 2) + 64, 10,
+                                  utils.blue_color, weather_top)
+                graphics.DrawText(offscreen_canvas, font_medium, ((64 - len(forecast * 6)) / 2) + 64, 18,
+                                  utils.blue_color, forecast)
+                graphics.DrawText(offscreen_canvas, font_medium, ((64 - len(wind * 6)) / 2) + 64, 28,
+                                  utils.blue_color, wind)
 
-                        if len(text_lines) >= 2:
-                            graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[1] * 6)) / 2) + 64, 18,
-                                              text_color, text_lines[1])
+            if show_text > 0:
+                for line_of_text in utils.text_lines:   # loop through all parsed lines of text
+                    if utils.font_size == 0:            # determine font size
+                        font = font_small
+                    elif utils.font_size == 1:
+                        font = font_medium
+                    else:
+                        font = font_large
 
-                        if len(text_lines) >= 3:
-                            graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[2] * 6)) / 2) + 64, 27,
-                                              text_color, text_lines[2])
-            else:  # we are full text, lets format and center all of the lines
-                if len(text_lines) >= 1:
-                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[0] * 6)) / 2), 9, text_color,
-                                      text_lines[0])
+                    positioning = line_of_text.parse_position()     # parse position for the lines of text for placement
 
-                if len(text_lines) >= 2:
-                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[1] * 6)) / 2), 18, text_color,
-                                      text_lines[1])
-
-                if len(text_lines) >= 3:
-                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[2] * 6)) / 2), 27, text_color,
-                                      text_lines[2])
-
-                if len(text_lines) >= 4:
-                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[3] * 6)) / 2) + 64, 9,
-                                      text_color,
-                                      text_lines[3])
-
-                if len(text_lines) >= 5:
-                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[4] * 6)) / 2) + 64, 18,
-                                      text_color,
-                                      text_lines[4])
-
-                if len(text_lines) >= 6:
-                    graphics.DrawText(offscreen_canvas, font_half, ((64 - len(text_lines[5] * 6)) / 2) + 64, 27,
-                                      text_color,
-                                      text_lines[5])
+                    # draw line of text at centered positions in the needed font and color
+                    graphics.DrawText(offscreen_canvas, font, positioning[0], positioning[1], text_color, line_of_text.line_text)
 
     if utils.update_board:    # only swap screen on update events
         matrix.SwapOnVSync(offscreen_canvas)
@@ -235,7 +227,7 @@ def update_clock():
 
 
 def main() -> None:
-    updater = Updater(dotenv_values(".env")["API_KEY"]) # load bot API token from .env file
+    updater = Updater(dotenv_values(".env")["API_KEY"])     # load bot API token from .env file
 
     updater.dispatcher.add_handler(CallbackQueryHandler(buttons))   # callback listener for the buttons
     updater.dispatcher.add_handler(CommandHandler('help', help_command))        # declare the commands
@@ -277,13 +269,18 @@ if __name__ == '__main__':
 
     matrix = RGBMatrix(options=options)
 
-    font = graphics.Font()  # default fonts that are constantly referenced throughout
-    font.LoadFont("/home/pi/rpi-rgb-led-matrix/fonts/8x13B.bdf")
+    # load all fonts needed for this program on the matrix
 
-    font_half = graphics.Font()
-    font_half.LoadFont("/home/pi/rpi-rgb-led-matrix/fonts/6x9.bdf")
+    font_time = graphics.Font()  # default fonts that are constantly referenced throughout
+    font_time.LoadFont("/home/pi/rpi-rgb-led-matrix/fonts/8x13B.bdf")
 
-    font_date = graphics.Font()
-    font_date.LoadFont("/home/pi/rpi-rgb-led-matrix/fonts/5x8.bdf")
+    font_large = graphics.Font()  # default fonts that are constantly referenced throughout
+    font_large.LoadFont("/home/pi/rpi-rgb-led-matrix/fonts/8x13.bdf")
+
+    font_medium = graphics.Font()
+    font_medium.LoadFont("/home/pi/rpi-rgb-led-matrix/fonts/6x9.bdf")
+
+    font_small = graphics.Font()
+    font_small.LoadFont("/home/pi/rpi-rgb-led-matrix/fonts/5x8.bdf")
 
     main()      # go to the main function for bot setup

@@ -6,6 +6,7 @@ The matrix clock is a set of two vertically stacked 64x32 matrices built using t
 - Telegram bot button interface for easy customization and control
 - Clock automatically switches itself to night mode (red text for less eye strain) as it gets later, then goes back to normal colors during the day
 - Write text onto the screen (full or half screen) to set reminders for yourself
+    - Change the font size to make words bigger or fit more words on the screen
 	- Change the font color for easy customization
 - Send photos to the bot to display them on the matrix (automatically scales), and even overlay text to create quick images.
 
@@ -28,7 +29,7 @@ Matrix with a reminder:
 Interface:
 
 
-![Interface](https://i.imgur.com/cHN4hDS.jpg "Interface")
+![Interface](https://i.imgur.com/oVwr6uQ.jpg "Interface")
 
 ### Commands
 ##### /help
