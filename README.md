@@ -62,4 +62,3 @@ The bot runs in the python directory in the rpi-rgb-led-matrix library, and requ
 ### Referenced Libraries
 - [rpi-rgb-led-matrix](https://github.com/hzeller/rpi-rgb-led-matrix "rpi-rgb-led-matrix")
 - [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot "python-telegram-bot")
-- [python-dotenv](https://github.com/theskumar/python-dotenv "python-dotenv")
