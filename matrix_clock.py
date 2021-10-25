@@ -4,19 +4,18 @@ from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageH
 from basic_commands import *
 from text_handler import *
 from emoji import emojize
-from dotenv import load_dotenv
-from dotenv import dotenv_values
 import time_utility
+import text_handler
 import utils
 import logging
 import threading
+import os
+
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
 )
 logger = logging.getLogger(__name__)
-
-load_dotenv()
 
 
 def button_generation(update: Update, context: CallbackContext) -> None:
@@ -80,8 +79,6 @@ def buttons(update: Update, context: CallbackContext) -> None:
         utils.show_text = 0
         utils.show_image = False
         utils.text_lines = []
-        utils.font_size = 1
-        utils.last_text_input = ""
         utils.update_board = True
     elif "red" in data:         # make sure conflicting variables are set to the opposite
         utils.override_red = True
@@ -106,17 +103,17 @@ def buttons(update: Update, context: CallbackContext) -> None:
     elif "clearimage" in data:
         utils.show_image = False
         utils.update_board = True
-    elif "small" in data:       # run the old text through again so it scales properly
+    elif "small" in data:
         utils.font_size = 0
-        parse_text(utils.last_text_input)
+        text_handler.parse_text(utils.last_text_input)
         utils.update_board = True
     elif "medium" in data:
         utils.font_size = 1
-        parse_text(utils.last_text_input)
+        text_handler.parse_text(utils.last_text_input)
         utils.update_board = True
     elif "large" in data:
         utils.font_size = 2
-        parse_text(utils.last_text_input)
+        text_handler.parse_text(utils.last_text_input)
         utils.update_board = True
 
 
@@ -163,7 +160,7 @@ def update_clock():
 
     # update weather every 5 minutes (to prevent exceeding the query limit for open weather api)
     if (current_time.endswith("0") or current_time.endswith("5")) and now[3] == 0:
-        time_utility.update_weather()   # poll and update the weather variables in the utils class
+        time_utility.update_weather()
 
     # make sure we update if we are at 0 seconds on the time (minute changed) and we do not have full screen text or an image
     if now[3] == 0 and utils.show_text < 2 and not utils.show_image:
@@ -174,8 +171,8 @@ def update_clock():
         if utils.show_image:  # always show the image before going further if we have one
             offscreen_canvas.SetImage(utils.image.convert('RGB'))
 
-        time_position = ((64 - (len(current_time) * 8)) / 2) - 6  # determine central positioning for the date and time lines
-        ampm_position = time_position + (len(current_time) * 8)       # determine positioning for the am or pm after the time
+        position = ((64 - (len(current_time) * 8)) / 2) - 6  # determine central positioning for the date and time lines
+        position2 = position + (len(current_time) * 8)
 
         if utils.update_board:  # only update if we need to push something new (reduces flicker)
             show_text = utils.show_text
@@ -189,36 +186,35 @@ def update_clock():
                                   day)
                 graphics.DrawText(offscreen_canvas, font_small, ((64 - len(date * 5)) / 2), 16, utils.purple_color,
                                   date)
-                graphics.DrawText(offscreen_canvas, font_time, time_position, 29, utils.red_color, current_time)
-                graphics.DrawText(offscreen_canvas, font_medium, ampm_position, 29, utils.red_color, now[2])
+                graphics.DrawText(offscreen_canvas, font_time, position, 29, utils.red_color, current_time)
+                graphics.DrawText(offscreen_canvas, font_medium, position2, 29, utils.red_color, now[2])
 
             if show_text == 0 and not utils.show_image:  # no text or image at all, lets show the weather
-                temp = utils.temp       # grab current weather from the saved values in the utils class
+                temp = utils.temp
                 forecast = utils.forecast
                 wind = utils.wind
                 real_feel = utils.real_feel
 
                 weather_top = str(temp) + "F   " + str(real_feel) + "F"
 
-                graphics.DrawText(offscreen_canvas, font_medium, ((64 - len(weather_top * 6)) / 2) + 64, 10,
+                graphics.DrawText(offscreen_canvas, font_medium, ((64 - len(weather_top * 6)) / 2), 42,
                                   utils.blue_color, weather_top)
-                graphics.DrawText(offscreen_canvas, font_medium, ((64 - len(forecast * 6)) / 2) + 64, 18,
+                graphics.DrawText(offscreen_canvas, font_medium, ((64 - len(forecast * 6)) / 2), 50,
                                   utils.blue_color, forecast)
-                graphics.DrawText(offscreen_canvas, font_medium, ((64 - len(wind * 6)) / 2) + 64, 28,
+                graphics.DrawText(offscreen_canvas, font_medium, ((64 - len(wind * 6)) / 2), 60,
                                   utils.blue_color, wind)
 
             if show_text > 0:
-                for line_of_text in utils.text_lines:   # loop through all parsed lines of text
-                    if utils.font_size == 0:            # determine font size
+                for line_of_text in utils.text_lines:
+                    if utils.font_size == 0:
                         font = font_small
                     elif utils.font_size == 1:
                         font = font_medium
                     else:
                         font = font_large
 
-                    positioning = line_of_text.parse_position()     # parse position for the lines of text for placement
+                    positioning = line_of_text.parse_position()
 
-                    # draw line of text at centered positions in the needed font and color
                     graphics.DrawText(offscreen_canvas, font, positioning[0], positioning[1], text_color, line_of_text.line_text)
 
     if utils.update_board:    # only swap screen on update events
@@ -227,7 +223,7 @@ def update_clock():
 
 
 def main() -> None:
-    updater = Updater(dotenv_values(".env")["API_KEY"])     # load bot API token from .env file
+    updater = Updater(os.environ["API_KEY"]) # load bot API token environment variables
 
     updater.dispatcher.add_handler(CallbackQueryHandler(buttons))   # callback listener for the buttons
     updater.dispatcher.add_handler(CommandHandler('help', help_command))        # declare the commands
@@ -246,7 +242,7 @@ def main() -> None:
         utils.override_red = True
 
     # start the bot
-    updater.start_polling()
+    updater.start_polling(poll_interval=1.0)
 
     # begin the clock update listener
     time_utility.update_weather()
@@ -258,9 +254,9 @@ def main() -> None:
 
 if __name__ == '__main__':
     options = RGBMatrixOptions()    # matrix set up options, API requires this to run first in a program
-    options.rows = 32
+    options.rows = 64
     options.cols = 64
-    options.chain_length = 2
+    options.chain_length = 1
     options.parallel = 1
     options.pwm_lsb_nanoseconds = 50
     options.brightness = 50
@@ -268,8 +264,6 @@ if __name__ == '__main__':
     options.hardware_mapping = 'adafruit-hat-pwm'
 
     matrix = RGBMatrix(options=options)
-
-    # load all fonts needed for this program on the matrix
 
     font_time = graphics.Font()  # default fonts that are constantly referenced throughout
     font_time.LoadFont("/home/pi/rpi-rgb-led-matrix/fonts/8x13B.bdf")

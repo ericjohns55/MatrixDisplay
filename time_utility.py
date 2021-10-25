@@ -1,10 +1,10 @@
 from datetime import datetime
 from datetime import date
-from dotenv import dotenv_values
 import requests
 import math
 import calendar
 import utils
+import os
 
 
 # split up the current time and format for use when we craft the text
@@ -38,7 +38,7 @@ def get_date():
 
 
 def update_weather():
-    url = dotenv_values(".env")["WEATHER_URL"]  # load weather URL from .env file
+    url = os.environ["WEATHER_URL"]  # load weather URL environment variables
 
     response = requests.get(url)
     data = response.json()

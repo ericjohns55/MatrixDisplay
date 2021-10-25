@@ -142,15 +142,15 @@ class TextLine:
 
         x_value = int((64 - (font_dimensions[0] * len(self.line_text))) / 2)
 
-        # offset values by 64 on the x plane to account for the fact that the 64x64 matrix must be addressed as a 128x32
-        if utils.show_text == 1 or (utils.show_text == 2 and self.line_number > font_dimensions[2] - 1):
-            x_value += 64
-
         if utils.font_size == 0:
             y_value = (8 * (self.line_number % font_dimensions[2])) + 7
         elif utils.font_size == 1:
             y_value = (10 * (self.line_number % font_dimensions[2])) + 9
         else:
             y_value = (16 * (self.line_number % font_dimensions[2])) + 13
+
+        # add 32 to the current y value for text in the bottom half of the screen
+        if utils.show_text == 1 or (utils.show_text == 2 and self.line_number > font_dimensions[2] - 1):
+            y_value += 32
 
         return x_value, y_value

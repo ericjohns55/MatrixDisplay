@@ -1,9 +1,9 @@
 from telegram import Update
-from dotenv import dotenv_values
 from io import BytesIO
 from PIL import Image
 from rgbmatrix import graphics
 import socket
+import os
 
 # declare field variables
 kill_program = False
@@ -44,7 +44,7 @@ def get_ip():
 
 # check authorized user, pretty much make sure its my user name because i do not want anyone else using the bot
 def authorized(update: Update) -> bool:
-    if update.message.from_user.username != dotenv_values(".env")["AUTHORIZED_USER"]:
+    if update.message.from_user.username != os.environ["AUTHORIZED_USER"]:
         print("!!! LOG-IN ATTEMPT !!!\nUsername: " + update.message.from_user.username)
         update.message.reply_text("You are not authorized to use this bot.")
         return False
@@ -55,13 +55,13 @@ def parse_image(file):
     imported = Image.open(BytesIO(file.download_as_bytearray()))  # convert to byte array to prevent saving locally
     imported = imported.resize((64, 64), Image.ANTIALIAS)  # resize to 64x64 for the 64x64 matrix
 
-    image = Image.new(mode='RGB', size=(128, 32))
+    #image = Image.new(mode='RGB', size=(128, 32))
     # matrix unfortunately does not read in square, create long image so it reads as a line
 
-    region1 = imported.crop((0, 0, 64, 32))  # copy top half into the left half of long image
-    region2 = imported.crop((0, 32, 64, 64))  # copy bottom half into the right half of long image
+    #region1 = imported.crop((0, 0, 64, 32))  # copy top half into the left half of long image
+    #region2 = imported.crop((0, 32, 64, 64))  # copy bottom half into the right half of long image
 
-    image.paste(region1, (0, 0, 64, 32))  # paste segments
-    image.paste(region2, (64, 0, 128, 32))
+    #image.paste(region1, (0, 0, 64, 32))  # paste segments
+    #image.paste(region2, (64, 0, 128, 32))
 
-    return image
+    return imported
