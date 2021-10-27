@@ -9,6 +9,7 @@ import text_handler
 import utils
 import logging
 import threading
+import asyncio
 import os
 
 
@@ -128,102 +129,105 @@ def poll_image(update: Update, context: CallbackContext) -> None:
     utils.update_board = True
 
 
-def update_clock():
-    if utils.kill_program:
-        return
-
-    threading.Timer(1.0, update_clock).start()  # run in a separate thread
-
-    # CLOCK UPDATE FUNCTION, EVERYTHING ABOVE IS THREADING
-
-    current_time = "fail"   # default value, will tell you visually if something went wrong
-
-    # grab current time
-    now = time_utility.get_time()
-
-    # color switch time, currently red between midnight and 11am, normal day colors every other time
-    # also clears the overrides at this time so they do not need to be manually reset
-    if (now[4] == 0 and now[5] == 0) or utils.override_red:
-        swap_color_defaults(True)
-        utils.override_red = False
-    elif (now[4] == 11 and now[5] == 0) or utils.override_color:
-        swap_color_defaults(False)
-        utils.override_color = False
-    elif now[4] == 11 and now[5] == 0:
-        utils.override_on = False
-        utils.override_off = False
-
+async def update_clock():
     # off screen canvas to swap with
     offscreen_canvas = matrix.CreateFrameCanvas()
+    
+    while True:
+        if utils.kill_program:
+            return
 
-    current_time = now[0]
+        # grab current time
+        now = time_utility.get_time()
 
-    # update weather every 5 minutes (to prevent exceeding the query limit for open weather api)
-    if (current_time.endswith("0") or current_time.endswith("5")) and now[3] == 0:
-        time_utility.update_weather()
+        # color switch time, currently red between midnight and 11am, normal day colors every other time
+        # also clears the overrides at this time so they do not need to be manually reset
+        if (now[4] == 0 and now[5] == 0) or utils.override_red:
+            swap_color_defaults(True)
+            utils.override_red = False
+        elif (now[4] == 11 and now[5] == 0) or utils.override_color:
+            swap_color_defaults(False)
+            utils.override_color = False
+        elif now[4] == 11 and now[5] == 0:
+            utils.override_on = False
+            utils.override_off = False
 
-    # make sure we update if we are at 0 seconds on the time (minute changed) and we do not have full screen text or an image
-    if now[3] == 0 and utils.show_text < 2 and not utils.show_image:
-        utils.update_board = True
+        current_time = now[0]
 
-    # if theres no override and we are in active hours
-    if not utils.override_off and ((now[4] >= 11 or now[4] < 3) or utils.override_on):
-        if utils.show_image:  # always show the image before going further if we have one
-            offscreen_canvas.SetImage(utils.image.convert('RGB'))
+        # update weather every 5 minutes (to prevent exceeding the query limit for open weather api)
+        if (current_time.endswith("0") or current_time.endswith("5")) and now[3] == 0:
+            time_utility.update_weather()
 
-        position = ((64 - (len(current_time) * 8)) / 2) - 6  # determine central positioning for the date and time lines
-        position2 = position + (len(current_time) * 8)
+        # make sure we update if we are at 0 seconds on the time (minute changed) and we do not have full screen text or an image
+        if now[3] == 0 and utils.show_text < 2 and not utils.show_image:
+            utils.update_board = True
 
-        if utils.update_board:  # only update if we need to push something new (reduces flicker)
-            show_text = utils.show_text
-            text_color = utils.text_color
+        # if theres no override and we are in active hours
+        if not utils.override_off and ((now[4] >= 11 or now[4] < 3) or utils.override_on):
+            if utils.show_image:  # always show the image before going further if we have one
+                offscreen_canvas.SetImage(utils.image.convert('RGB'))
 
-            if not utils.show_image and show_text < 2:  # no image, lets show the day, date, and time
-                day = time_utility.get_day()
-                date = time_utility.get_date()
+            position = ((64 - (len(current_time) * 8)) / 2) - 6  # determine central positioning for the date and time lines
+            position2 = position + (len(current_time) * 8)
 
-                graphics.DrawText(offscreen_canvas, font_small, ((64 - len(day * 5)) / 2), 8, utils.purple_color,
-                                  day)
-                graphics.DrawText(offscreen_canvas, font_small, ((64 - len(date * 5)) / 2), 16, utils.purple_color,
-                                  date)
-                graphics.DrawText(offscreen_canvas, font_time, position, 29, utils.red_color, current_time)
-                graphics.DrawText(offscreen_canvas, font_medium, position2, 29, utils.red_color, now[2])
+            if utils.update_board:  # only update if we need to push something new (reduces flicker)
+                show_text = utils.show_text
+                text_color = utils.text_color
 
-            if show_text == 0 and not utils.show_image:  # no text or image at all, lets show the weather
-                temp = utils.temp
-                forecast = utils.forecast
-                wind = utils.wind
-                real_feel = utils.real_feel
+                if not utils.show_image and show_text < 2:  # no image, lets show the day, date, and time
+                    day = time_utility.get_day()
+                    date = time_utility.get_date()
 
-                weather_top = str(temp) + "F   " + str(real_feel) + "F"
+                    graphics.DrawText(offscreen_canvas, font_small, ((64 - len(day * 5)) / 2), 8, utils.purple_color,
+                                      day)
+                    graphics.DrawText(offscreen_canvas, font_small, ((64 - len(date * 5)) / 2), 16, utils.purple_color,
+                                      date)
+                    graphics.DrawText(offscreen_canvas, font_time, position, 29, utils.red_color, current_time)
+                    graphics.DrawText(offscreen_canvas, font_medium, position2, 29, utils.red_color, now[2])
 
-                graphics.DrawText(offscreen_canvas, font_medium, ((64 - len(weather_top * 6)) / 2), 42,
-                                  utils.blue_color, weather_top)
-                graphics.DrawText(offscreen_canvas, font_medium, ((64 - len(forecast * 6)) / 2), 50,
-                                  utils.blue_color, forecast)
-                graphics.DrawText(offscreen_canvas, font_medium, ((64 - len(wind * 6)) / 2), 60,
-                                  utils.blue_color, wind)
+                if show_text == 0 and not utils.show_image:  # no text or image at all, lets show the weather
+                    temp = utils.temp
+                    forecast = utils.forecast
+                    wind = utils.wind
+                    real_feel = utils.real_feel
 
-            if show_text > 0:
-                for line_of_text in utils.text_lines:
-                    if utils.font_size == 0:
-                        font = font_small
-                    elif utils.font_size == 1:
-                        font = font_medium
-                    else:
-                        font = font_large
+                    weather_top = str(temp) + "F   " + str(real_feel) + "F"
 
-                    positioning = line_of_text.parse_position()
+                    graphics.DrawText(offscreen_canvas, font_medium, ((64 - len(weather_top * 6)) / 2), 42,
+                                      utils.blue_color, weather_top)
+                    graphics.DrawText(offscreen_canvas, font_medium, ((64 - len(forecast * 6)) / 2), 50,
+                                      utils.blue_color, forecast)
+                    graphics.DrawText(offscreen_canvas, font_medium, ((64 - len(wind * 6)) / 2), 60,
+                                      utils.blue_color, wind)
 
-                    graphics.DrawText(offscreen_canvas, font, positioning[0], positioning[1], text_color, line_of_text.line_text)
+                if show_text > 0:
+                    for line_of_text in utils.text_lines:
+                        if utils.font_size == 0:
+                            font = font_small
+                        elif utils.font_size == 1:
+                            font = font_medium
+                        else:
+                            font = font_large
 
-    if utils.update_board:    # only swap screen on update events
-        matrix.SwapOnVSync(offscreen_canvas)
-        utils.update_board = False    # turn off update to prevent flicker
+                        positioning = line_of_text.parse_position()
+
+                        graphics.DrawText(offscreen_canvas, font, positioning[0], positioning[1], text_color, line_of_text.line_text)
+
+        if utils.update_board:    # only swap screen on update events
+            offscreen_canvas = matrix.SwapOnVSync(offscreen_canvas)
+            offscreen_canvas.Clear()
+            utils.update_board = False    # turn off update to prevent flicker
+            
+        await asyncio.sleep(1.0)
+
+
+def loop_in_thread(loop):
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(update_clock())
 
 
 def main() -> None:
-    updater = Updater(os.environ["API_KEY"]) # load bot API token environment variables
+    updater = Updater(os.environ["API_KEY"])    # load bot API token environment variables
 
     updater.dispatcher.add_handler(CallbackQueryHandler(buttons))   # callback listener for the buttons
     updater.dispatcher.add_handler(CommandHandler('help', help_command))        # declare the commands
@@ -242,11 +246,16 @@ def main() -> None:
         utils.override_red = True
 
     # start the bot
-    updater.start_polling(poll_interval=1.0)
+    updater.start_polling(poll_interval=0.25)
 
     # begin the clock update listener
     time_utility.update_weather()
-    update_clock()
+
+    loop = asyncio.get_event_loop()
+    thread = threading.Thread(target=loop_in_thread, args=(loop,))
+    thread.start()
+
+    # update_clock()
 
     # run the bot until process ends
     updater.idle()
