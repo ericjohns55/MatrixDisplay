@@ -130,6 +130,9 @@ def poll_image(update: Update, context: CallbackContext) -> None:
 
 
 async def update_clock():
+    # off screen canvas to swap with
+    offscreen_canvas = matrix.CreateFrameCanvas()
+    
     while True:
         if utils.kill_program:
             return
@@ -148,9 +151,6 @@ async def update_clock():
         elif now[4] == 11 and now[5] == 0:
             utils.override_on = False
             utils.override_off = False
-
-        # off screen canvas to swap with
-        offscreen_canvas = matrix.CreateFrameCanvas()
 
         current_time = now[0]
 
@@ -214,7 +214,8 @@ async def update_clock():
                         graphics.DrawText(offscreen_canvas, font, positioning[0], positioning[1], text_color, line_of_text.line_text)
 
         if utils.update_board:    # only swap screen on update events
-            matrix.SwapOnVSync(offscreen_canvas)
+            offscreen_canvas = matrix.SwapOnVSync(offscreen_canvas)
+            offscreen_canvas.Clear()
             utils.update_board = False    # turn off update to prevent flicker
             
         await asyncio.sleep(1.0)
