@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.ext import CallbackContext
-from utils import authorized
+from rgbmatrix import graphics
+from utils import authorized, ColorKeyboards
 import utils
 import sys
 import os
@@ -36,6 +37,34 @@ def kill_command(update: Update, context: CallbackContext) -> None:
     utils.kill_program = True
 
     sys.exit(0)
+
+
+def color_command(update: Update, context: CallbackContext) -> None:
+    update.message.delete()
+
+    if not authorized(update):
+        return
+
+    utils.update_board = True
+
+    color = update.message.text
+
+    if len(color.replace("/color ", "").split(" ")) == 3:     # custom rgb values, split at spaces in message
+        rgb = color.replace("/color ", "").split(" ")
+        utils.nonstandard_colors = True
+
+        if utils.color_keyboard == ColorKeyboards.TEXT_COLOR:
+            utils.text_color = graphics.Color(int(rgb[0]), int(rgb[1]), int(rgb[2]))
+        elif utils.color_keyboard == ColorKeyboards.BACKGROUND_COLOR:
+            utils.background_color = graphics.Color(int(rgb[0]), int(rgb[1]), int(rgb[2]))
+        elif utils.color_keyboard == ColorKeyboards.DATE_COLOR:
+            utils.date_color = graphics.Color(int(rgb[0]), int(rgb[1]), int(rgb[2]))
+        elif utils.color_keyboard == ColorKeyboards.TIME_COLOR:
+            utils.time_color = graphics.Color(int(rgb[0]), int(rgb[1]), int(rgb[2]))
+        else:
+            utils.weather_color = graphics.Color(int(rgb[0]), int(rgb[1]), int(rgb[2]))
+    else:
+        update.message.reply_text("Invalid arguments. Use /color [red] [green] [blue]")
 
 
 def ping(update: Update, context: CallbackContext) -> None:
