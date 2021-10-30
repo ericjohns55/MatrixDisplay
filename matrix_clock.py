@@ -301,7 +301,7 @@ async def update_clock():
             time_utility.update_weather()
 
         # make sure we update if we are at 0 seconds on the time (minute changed) and we do not have full screen text or an image
-        if now[3] == 0 and utils.show_text < 2 and not utils.show_image < 2:
+        if now[3] == 0 and utils.show_text < 2 and utils.show_image < 2:
             utils.update_board = True
 
         # if theres no override and we are in active hours
