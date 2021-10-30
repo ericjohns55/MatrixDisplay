@@ -38,6 +38,8 @@ temp = 0
 real_feel = 0
 wind = "0.0 mph"
 
+drawings = []
+
 canvas_mode = False
 update_board = True
 text_lines = []
