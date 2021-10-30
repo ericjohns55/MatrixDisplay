@@ -61,9 +61,15 @@ def button_generation(update: Update, context: CallbackContext) -> None:
         ]
     ]
 
-    system_keyboard = [[
-        InlineKeyboardButton("Ping", callback_data='ping'), InlineKeyboardButton("IP", callback_data='ip')
-    ]]
+    system_keyboard = [
+        [
+            InlineKeyboardButton("Canvas Mode On", callback_data='canvas_mode_on'),
+            InlineKeyboardButton("Canvas Mode Off", callback_data='canvas_mode_off')
+        ],
+        [
+            InlineKeyboardButton("Ping", callback_data='ping'), InlineKeyboardButton("IP", callback_data='ip')
+        ]
+    ]
 
     update.message.reply_text(emojize(':mantelpiece_clock:') + " Clock Controls " + emojize(":mantelpiece_clock:"),
                               reply_markup=InlineKeyboardMarkup(clock_controls_keyboard))
@@ -150,6 +156,12 @@ def buttons(update: Update, context: CallbackContext) -> None:
         update.callback_query.delete_message()
         utils.color_keyboard = ColorKeyboards.WEATHER_COLOR
         generate_color_keyboard(update, context)
+    elif "canvas_mode_on" in data:
+        utils.update_board = True
+        utils.canvas_mode = True
+    elif "canvas_mode_off" in data:
+        utils.update_board = True
+        utils.canvas_mode = False
     elif "normalize" in data:   # set everything to defaults
         utils.override_red = False
         utils.override_color = False
@@ -160,6 +172,7 @@ def buttons(update: Update, context: CallbackContext) -> None:
         utils.text_lines = []
         utils.update_board = True
         utils.background_color = graphics.Color(0, 0, 0)
+        utils.canvas_mode = False
     elif "red" in data:         # make sure conflicting variables are set to the opposite
         utils.override_red = True
         utils.override_color = False
@@ -172,6 +185,7 @@ def buttons(update: Update, context: CallbackContext) -> None:
         utils.override_on = True
         utils.override_off = False
         utils.update_board = True
+        utils.canvas_mode = False
     elif "off" in data:
         utils.override_off = True
         utils.override_on = False
@@ -211,6 +225,7 @@ def buttons(update: Update, context: CallbackContext) -> None:
             utils.update_board = True
     elif "full_image" in data:
         utils.show_image = 2
+        utils.canvas_mode = True
 
         if utils.image is not None:
             utils.update_board = True
@@ -304,7 +319,7 @@ async def update_clock():
                 show_text = utils.show_text
                 text_color = utils.text_color
 
-                if show_text < 2 and utils.show_image < 2:  # no image, lets show the day, date, and time
+                if show_text < 2 and utils.show_image < 2 and not utils.canvas_mode:  # no image, lets show the day, date, and time
                     day = time_utility.get_day()
                     date = time_utility.get_date()
 
@@ -315,7 +330,7 @@ async def update_clock():
                     graphics.DrawText(offscreen_canvas, font_time, position, 29, utils.time_color, current_time)
                     graphics.DrawText(offscreen_canvas, font_medium, position2, 29, utils.time_color, now[2])
 
-                if show_text == 0 and utils.show_image < 2:  # no text or image at all, lets show the weather
+                if show_text == 0 and utils.show_image < 2 and not utils.canvas_mode:  # no text or image at all, lets show the weather
                     temp = utils.temp
                     forecast = utils.forecast
                     wind = utils.wind
