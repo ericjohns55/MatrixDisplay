@@ -306,16 +306,17 @@ async def update_clock():
 
         # if theres no override and we are in active hours
         if not utils.override_off and ((now[4] >= 11 or now[4] < 3) or utils.override_on):
-            # add background color
-            offscreen_canvas.Fill(utils.background_color.red, utils.background_color.green, utils.background_color.blue)
-
-            if utils.show_image > 0 and utils.image is not None:  # always show the image before going further if we have one
-                offscreen_canvas.SetImage(utils.image.convert('RGB'))
-
-            position = ((64 - (len(current_time) * 8)) / 2) - 6  # determine central positioning for the date and time lines
-            position2 = position + (len(current_time) * 8)
-
             if utils.update_board:  # only update if we need to push something new (reduces flicker)
+                # add background color
+                offscreen_canvas.Fill(utils.background_color.red, utils.background_color.green,
+                                      utils.background_color.blue)
+
+                if utils.show_image > 0 and utils.image is not None:  # always show the image before going further if we have one
+                    offscreen_canvas.SetImage(utils.image.convert('RGB'))
+
+                position = ((64 - (len(current_time) * 8)) / 2) - 6  # determine central positioning for the date and time lines
+                position2 = position + (len(current_time) * 8)
+
                 show_text = utils.show_text
                 text_color = utils.text_color
 
@@ -358,11 +359,13 @@ async def update_clock():
 
                         graphics.DrawText(offscreen_canvas, font, positioning[0], positioning[1], text_color, line_of_text.line_text)
 
-        if utils.update_board:    # only swap screen on update events
-            offscreen_canvas = matrix.SwapOnVSync(offscreen_canvas)
-            offscreen_canvas.Clear()
-            utils.update_board = False    # turn off update to prevent flicker
-            
+                offscreen_canvas = matrix.SwapOnVSync(offscreen_canvas)
+                offscreen_canvas.Clear()
+                utils.update_board = False  # turn off update to prevent flicker
+        else:
+            if utils.update_board:
+                matrix.Clear()
+
         await asyncio.sleep(1.0)
 
 
