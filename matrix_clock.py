@@ -3,6 +3,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 
 import drawing
+from advanced_commands import *
 from basic_commands import *
 from text_handler import *
 from emoji import emojize
@@ -178,13 +179,6 @@ def buttons(update: Update, context: CallbackContext) -> None:
         utils.canvas_mode = False
     elif "custom_color" in data:
         update.callback_query.delete_message()
-
-        # THIS IS FOR TESTING PURPOSES BEFORE FULL DRAWINGS IMPLEMENTATIOn
-        # utils.drawings.append(CircleDrawing(0, 0, 10, "red"))
-        # utils.drawings.append(RectangleDrawing(20, 20, 40, 35, 2, "green"))
-        # utils.drawings.append(LineDrawing(50, 5, 55, 62, "yellow"))
-        # utils.drawings.append(AreaDrawing(35, 8, 55, 15, "blue"))
-
         context.bot.send_message(update.effective_chat.id, "To use a custom color send /color [red] [green] [blue]")
     elif "red" in data:         # make sure conflicting variables are set to the opposite
         utils.override_red = True
@@ -375,31 +369,31 @@ async def update_clock():
 
                     if type(current_drawing) == CircleDrawing:
                         graphics.DrawCircle(offscreen_canvas, current_drawing.x, current_drawing.y, current_drawing.radius,
-                                            utils.parse_color(current_drawing.color))
+                                            current_drawing.color)
                     elif type(current_drawing) == RectangleDrawing:
                         for offset in range(int(current_drawing.thickness)):
                             graphics.DrawLine(offscreen_canvas, current_drawing.x1, current_drawing.y1 + offset,
                                               current_drawing.x2, current_drawing.y1 + offset,
-                                              utils.parse_color(current_drawing.color))
+                                              current_drawing.color)
                             graphics.DrawLine(offscreen_canvas, current_drawing.x2 - offset, current_drawing.y1,
                                               current_drawing.x2 - offset, current_drawing.y2,
-                                              utils.parse_color(current_drawing.color))
+                                              current_drawing.color)
                             graphics.DrawLine(offscreen_canvas, current_drawing.x1, current_drawing.y2 - offset,
                                               current_drawing.x2, current_drawing.y2 - offset,
-                                              utils.parse_color(current_drawing.color))
+                                              current_drawing.color)
                             graphics.DrawLine(offscreen_canvas, current_drawing.x1 + offset, current_drawing.y1,
                                               current_drawing.x1 + offset, current_drawing.y2,
-                                              utils.parse_color(current_drawing.color))
+                                              current_drawing.color)
                     elif type(current_drawing) == LineDrawing:
                         graphics.DrawLine(offscreen_canvas, current_drawing.x1, current_drawing.y1, current_drawing.x2,
-                                          current_drawing.y2, utils.parse_color(current_drawing.color))
+                                          current_drawing.y2, current_drawing.color)
                     elif type(current_drawing) == AreaDrawing:
                         for x in range(current_drawing.x1, current_drawing.x2):
                             for y in range(current_drawing.y1, current_drawing.y2):
-                                color = utils.parse_color(current_drawing.color)
-                                matrix.SetPixel(x, y, color.red, color.green, color.blue)
+                                color = current_drawing.color
+                                offscreen_canvas.SetPixel(x, y, color.red, color.green, color.blue)
                     elif type(current_drawing) == BackgroundDrawing:
-                        color = utils.parse_color(current_drawing.color)
+                        color = current_drawing.color
                         offscreen_canvas.Fill(color.red, color.green, color.blue)
                     elif type(current_drawing) == TextDrawing:
                         print("NOT IMPLEMENTED YET")
@@ -432,6 +426,15 @@ def main() -> None:
     updater.dispatcher.add_handler(CommandHandler('text', text))
     updater.dispatcher.add_handler(CommandHandler('textf', text))
     updater.dispatcher.add_handler(CommandHandler('color', color_command))
+
+    updater.dispatcher.add_handler(CommandHandler('drawcircle', draw_circle_command))
+    updater.dispatcher.add_handler(CommandHandler('drawrectangle', draw_rectangle_command))
+    updater.dispatcher.add_handler(CommandHandler('drawline', draw_line_command))
+    updater.dispatcher.add_handler(CommandHandler('drawtext', draw_text_command))
+    updater.dispatcher.add_handler(CommandHandler('fillarea', fill_area_command))
+    updater.dispatcher.add_handler(CommandHandler('fill', fill_command))
+    updater.dispatcher.add_handler(CommandHandler('listscripts', list_scripts))
+    updater.dispatcher.add_handler(CommandHandler('clearscripts', clear_scripts))
 
     updater.dispatcher.add_handler(MessageHandler(Filters.photo, poll_image))
 

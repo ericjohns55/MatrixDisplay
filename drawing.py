@@ -1,3 +1,4 @@
+from rgbmatrix import graphics
 from enum import Enum
 
 
@@ -11,13 +12,14 @@ class DrawingType(Enum):
 
 
 class Drawing:
-    def __init__(self, drawing_type: DrawingType):
+    def __init__(self, drawing_type: DrawingType, command):
         self.type = drawing_type
+        self.command = command
 
 
 class CircleDrawing(Drawing):
-    def __init__(self, x: int, y: int, radius: int, color):
-        super().__init__(DrawingType.CIRCLE)
+    def __init__(self, command, x: int, y: int, radius: int, color: graphics.Color):
+        super().__init__(DrawingType.CIRCLE, command)
         self.x = x
         self.y = y
         self.radius = radius
@@ -25,8 +27,8 @@ class CircleDrawing(Drawing):
 
 
 class RectangleDrawing(Drawing):
-    def __init__(self, x1: int, y1: int, x2: int, y2: int, thickness: int, color):
-        super().__init__(DrawingType.RECTANGLE)
+    def __init__(self, command, x1: int, y1: int, x2: int, y2: int, thickness: int, color: graphics.Color):
+        super().__init__(DrawingType.RECTANGLE, command)
         self.x1 = x1
         self.y1 = y1
         self.x2 = x2
@@ -36,8 +38,8 @@ class RectangleDrawing(Drawing):
 
 
 class LineDrawing(Drawing):
-    def __init__(self, x1: int, y1: int, x2: int, y2: int, color):
-        super().__init__(DrawingType.RECTANGLE)
+    def __init__(self, command, x1: int, y1: int, x2: int, y2: int, color: graphics.Color):
+        super().__init__(DrawingType.LINE, command)
         self.x1 = x1
         self.y1 = y1
         self.x2 = x2
@@ -46,8 +48,8 @@ class LineDrawing(Drawing):
 
 
 class AreaDrawing(Drawing):
-    def __init__(self, x1: int, y1: int, x2: int, y2: int, color):
-        super().__init__(DrawingType.RECTANGLE)
+    def __init__(self, command, x1: int, y1: int, x2: int, y2: int, color: graphics.Color):
+        super().__init__(DrawingType.AREA, command)
         self.x1 = x1
         self.y1 = y1
         self.x2 = x2
@@ -56,14 +58,14 @@ class AreaDrawing(Drawing):
 
 
 class BackgroundDrawing(Drawing):
-    def __init__(self, color):
-        super().__init__(DrawingType.BACKGROUND)
+    def __init__(self, command, color: graphics.Color):
+        super().__init__(DrawingType.BACKGROUND, command)
         self.color = color
 
 
 class TextDrawing(Drawing):
-    def __init__(self, x: int, y: int, font, color, text):
-        super().__init__(DrawingType.TEXT)
+    def __init__(self, command, x: int, y: int, font, color, text: graphics.Color):
+        super().__init__(DrawingType.TEXT, command)
         self.x = x
         self.y = y
         self.font = font

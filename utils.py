@@ -6,6 +6,8 @@ from enum import Enum
 import socket
 import os
 
+import utils
+
 
 class ColorKeyboards(Enum):
     TEXT_COLOR = 0,
@@ -100,6 +102,8 @@ def parse_color(color):
 def parse_image(file):
     imported = Image.open(BytesIO(file.download_as_bytearray()))  # convert to byte array to prevent saving locally
     imported = imported.resize((64, 64), Image.ANTIALIAS)  # resize to 64x64 for the 64x64 matrix
+
+    utils.update_board = True
 
     """
     THE FOLLOWING CODE IS FOR TWO 64x32 MATRICES
