@@ -1,6 +1,6 @@
-# Matrix Clock
+# Matrix Display
 
-The matrix clock is a set of two vertically stacked 64x32 matrices built using the rpi-rgb-led-matrix library and controlled through a telegram bot. The clock displays the current day, date, time, and the weather and contains a couple other exciting features to let you get the most out of your matrix.
+The matrix display is a clock and matrix driver program embedded within a telegram bot. It currently runs off of vertically stacked 64x32 matrices (can be adjusted to 64x64) and was built using the rpi-rgb-led-matrix library. The clock displays the current day, date, time, and the weather and contains a couple other exciting features to let you get the most out of your matrix.
 
 ### Features
 - Telegram bot button interface for easy customization and control
