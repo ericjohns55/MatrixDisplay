@@ -14,8 +14,8 @@ import os
 MATRIX_WIDTH = 64
 MATRIX_HEIGHT = 32
 
-FONTS_FOLDER = "fonts"
-DRAWINGS_FOLDER = "/home/pi/rpi-rgb-led-matrix/fonts"
+FONTS_FOLDER = "/home/pi/rpi-rgb-led-matrix/fonts"
+DRAWINGS_FOLDER = "drawings"
 BOT_API_KEY = "<your API key here>"
 
 
