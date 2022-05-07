@@ -359,7 +359,7 @@ def clock_command(update: Update, context: CallbackContext) -> None:
         global contains_clock_drawing   # set this to true so we know we need to update every minute
         contains_clock_drawing = True
     except (ValueError, IndexError):
-        generate_dismiss_keyboard(update, "Invalid use of /clock\nCorrect usage: {0}".format(drawing.DrawingType.get_args(drawing.DrawingType.CLOCK)))
+        generate_dismiss_keyboard(update, "Invalid use of /clock\nCorrect usage: {0}".format(drawing.Drawing.get_args(drawing.DrawingType.CLOCK)))
 
 
 def clear_command(update: Update, context: CallbackContext) -> None:
